@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+
+set -e
+
+# Use `curl -fsSL https://get.please.build/latest_version` for the latest version
+VERSION=`curl -fsSL https://get.please.build/latest_version`
+LOCATION="${HOME}/.please/${VERSION}"
+BIN="${LOCATION}/please"
+
+function download {
+  VERSION=${1}
+  LOCATION=${2}
+
+  OS=`uname`
+  if [ "${OS}" = "Linux" ]; then
+      GOOS="linux"
+  elif [ "${OS}" = "Darwin" ]; then
+      GOOS="darwin"
+  else
+      echo "Unknown operating system ${OS}"
+      exit 1
+  fi
+
+  PLEASE_URL="https://get.please.build/${GOOS}_amd64/${VERSION}/please_${VERSION}.tar.gz"
+
+  mkdir -p "${LOCATION}"
+
+  echo "Please URL: ${PLEASE_URL}"
+  echo "Downloading Please ${VERSION} to ${LOCATION} ..."
+  curl -f#SL "${PLEASE_URL}" | tar -xzpf- --strip-components=1 -C "${LOCATION}"
+}
+
+if [[ ! -e "${BIN}" ]]; then
+  download ${VERSION} ${LOCATION}
+fi
+
+${BIN} ${@}
