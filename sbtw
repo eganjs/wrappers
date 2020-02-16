@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Hack the tag badge for the latest version ;)
+VERSION=$(curl -fsSL https://img.shields.io/github/v/tag/sbt/sbt.svg | grep -Po '(?<=>v)[0-9.]+(?=</text>)' | head -n 1)
+LOCATION="${HOME}/.sbt/sbtw/${VERSION}"
+BIN="${LOCATION}/bin/sbt"
+
+function download {
+  VERSION=${1}
+  LOCATION=${2}
+
+  URL="https://piccolo.link/sbt-${VERSION}.tgz"
+
+  mkdir -p "${LOCATION}"
+
+  echo "URL: ${URL}"
+  echo "Downloading ${VERSION} to ${LOCATION} ..."
+  curl -f#SL "${URL}" | tar -xzpf- --strip-components=1 -C "${LOCATION}"
+}
+
+if [[ ! -e "${BIN}" ]]; then
+  download ${VERSION} ${LOCATION}
+fi
+
+${BIN} ${@}
