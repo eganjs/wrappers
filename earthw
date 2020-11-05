@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+
+set -e
+
+ALIAS="earthw"
+REPO="github.com/earthly/earthly"
+BIN="earth"
+VERSION="" # leave empty to resolve the latest
+
+LINK=${HOME}/.local/bin/${BIN}
+mkdir -p $(dirname ${LINK})
+
+LOCATION=${HOME}/.${ALIAS}
+mkdir -p ${LOCATION}
+
+if [[ -z "${VERSION}" ]] && LATEST_TAG=$(
+  git -c 'versionsort.suffix=-' \
+    ls-remote --tags --sort='v:refname' git://${REPO}.git \
+    | tail --lines=1 \
+    | cut --delimiter='/' --fields=3
+); then
+  VERSION=${LATEST_TAG}
+fi
+
+UPDATE_FILE=${LOCATION}/updated
+
+if ! find ${UPDATE_FILE} -mtime -1 &> /dev/null \
+&& [[ -n "${VERSION}" ]] \
+&& VERSION_BIN=${LOCATION}/${VERSION}/${BIN} \
+&& [[ ! -f ${VERSION_BIN} ]]; then
+  echo "Updating..."
+
+  OS=$(uname); OS=${OS,,}
+  
+  if ! [[ "${OS}" = "linux" || "${OS}" = "darwin" ]]; then
+      echo "Unsupported operating system ${OS}"
+      exit 1
+  fi
+
+  mkdir -p $(dirname ${VERSION_BIN})
+  wget https://${REPO}/releases/download/${VERSION}/earth-${OS}-amd64 \
+    -O ${VERSION_BIN}
+
+  chmod +x ${VERSION_BIN}
+
+  rm -f ${LINK}
+  ln -s ${VERSION_BIN} ${LINK}
+                                   
+  touch ${UPDATE_FILE}
+fi
+
+${LINK} ${@}
