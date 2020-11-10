@@ -31,7 +31,7 @@ if ! find ${UPDATE_FILE} -mtime -1 &> /dev/null \
   echo "Updating..."
 
   OS=$(uname); OS=${OS,,}
-  
+
   if ! [[ "${OS}" = "linux" || "${OS}" = "darwin" ]]; then
       echo "Unsupported operating system ${OS}"
       exit 1
@@ -45,8 +45,32 @@ if ! find ${UPDATE_FILE} -mtime -1 &> /dev/null \
 
   rm -f ${LINK}
   ln -s ${VERSION_BIN} ${LINK}
-                                   
+
   touch ${UPDATE_FILE}
 fi
 
-${LINK} ${@}
+# load aws credentials
+eval $(
+  python3 <<EOF
+from configparser import ConfigParser
+from os import getenv
+from pathlib import Path
+
+config = ConfigParser()
+config.read(Path.home() / ".aws" / "credentials")
+profileConfig = config[getenv("AWS_PROFILE", default="default")]
+
+print("_AWS_ACCESS_KEY_ID=" + profileConfig["aws_access_key_id"])
+print("_AWS_SECRET_ACCESS_KEY=" + profileConfig["aws_secret_access_key"])
+EOF
+)
+
+# run earthly
+${LINK} \
+  --secret AWS_ACCESS_KEY_ID=${_AWS_ACCESS_KEY_ID} \
+  --secret AWS_SECRET_ACCESS_KEY=${_AWS_SECRET_ACCESS_KEY} \
+  ${@}
+
+# cleaning up aws credentials
+unset _AWS_ACCESS_KEY_ID
+unset _AWS_SECRET_ACCESS_KEY
